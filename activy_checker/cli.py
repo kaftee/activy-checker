@@ -11,6 +11,7 @@ from .activy import ActivyClient, ActivyError
 from .compare import compare
 from .garmin import GarminClient
 from .models import KIND_STEPS, Activity
+from .progress import Spinner
 from .report import render_comparison, render_summary, summarize
 
 
@@ -53,6 +54,13 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _activy_progress(p: dict, since: str) -> str:
+    contest = f" (contest {p['contest']}/{p['contests']})" if p["contests"] > 1 else ""
+    reached = f", reached {p['reached']}" if p["reached"] else ""
+    return (f"Scanning Activy feed{contest}: page {p['page']}, "
+            f"{p['found']} of yours so far{reached} (going back to {since}) ...")
+
+
 def _activity_dict(a: Activity) -> dict:
     return {
         "source": a.source, "id": a.id, "date": a.date, "start": a.start,
@@ -65,19 +73,25 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     # --- Activy ---
-    print(f"Fetching Activy activities since {args.since} ...", file=sys.stderr)
+    print(f"Fetching Activy activities since {args.since}.", file=sys.stderr)
     activy = ActivyClient()
     try:
         email = _prompt("Activy email: ", args.activy_email)
         password = getpass.getpass("Activy password (hidden): ")
-        activy.login(email, password)
-        activy_acts = activy.get_activities(args.since)
+        with Spinner("Signing in to Activy ...") as sp:
+            activy.login(email, password)
+            sp.update("Looking up your Activy contests ...")
+            activy_acts = activy.get_activities(
+                args.since, progress=lambda p: sp.update(_activy_progress(p, args.since)))
     except (ActivyError, OSError, ValueError) as e:  # OSError covers network errors
         print(f"Activy error: {e}", file=sys.stderr)
         return 2
     activy_acts = [a for a in activy_acts if args.since <= a.date <= args.until]
     if not args.include_steps:
         activy_acts = [a for a in activy_acts if a.kind != KIND_STEPS]
+    if not activy_acts:
+        print("Warning: no Activy activities found in this date range. If you expected some, "
+              "see docs/troubleshooting.md#activy-returns-no-activities", file=sys.stderr)
     print(render_summary("Activy", activy_acts))
 
     if args.activy_only:
@@ -86,16 +100,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # --- Garmin ---
-    print(f"\nFetching Garmin activities since {args.since} ...", file=sys.stderr)
+    print(f"\nFetching Garmin activities since {args.since}.", file=sys.stderr)
     garmin = GarminClient(tokenstore=args.garmin_tokenstore)
     try:
-        if garmin.try_resume():
+        with Spinner("Checking for a saved Garmin session ..."):
+            resumed = garmin.try_resume()
+        if resumed:
             print("Resumed saved Garmin session.", file=sys.stderr)
         else:
             gemail = _prompt("Garmin email: ", args.garmin_email)
             gpass = getpass.getpass("Garmin password (hidden): ")
+            # No spinner here: garminconnect may ask for an MFA code and print
+            # its own messages, which an animated line would overwrite.
+            print("Signing in to Garmin (this can take a moment) ...", file=sys.stderr)
             garmin.login(gemail, gpass, mfa_prompt=lambda: _prompt("Garmin MFA code: ", None))
-        garmin_acts = garmin.get_activities(args.since, args.until)
+        with Spinner(f"Fetching Garmin activities {args.since} .. {args.until} ..."):
+            garmin_acts = garmin.get_activities(args.since, args.until)
     except Exception as e:  # garminconnect raises its own exception types
         print(f"Garmin error: {e}", file=sys.stderr)
         return 3

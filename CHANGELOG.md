@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+- Activy returned no activities after a long wait: `UserContestFeed` was
+  queried without `UserId`, which the API rejects, so the client fell back to
+  a feed that ignores paging and re-read the same page up to 500 times.
+- Paging now also stops when a feed returns the same page twice.
+
+### Added
+- Live progress line while Activy is scanned (page, activities found, date
+  reached) and spinners for Garmin steps; drawn on stderr, only in a terminal.
+- A warning when no Activy activities are found.
+
 ## 0.2.0
 
 ### Fixed

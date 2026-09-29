@@ -17,7 +17,9 @@ class FakeActivyClient:
             raise self.fail
         self.email = email
 
-    def get_activities(self, since):
+    def get_activities(self, since, progress=None):
+        if progress:
+            progress({"contest": 1, "contests": 1, "page": 1, "found": 1, "reached": since})
         return list(self.activities)
 
 
@@ -170,6 +172,22 @@ def test_email_flags_skip_prompts(fakes, capsys):
     cli.main(["--since", "2026-09-01", "--activy-email", "a@example.com", "--garmin-email", "g@example.com"])
     assert "email:" not in capsys.readouterr().err
     assert FakeGarminClient.logins == [("g@example.com", "pw")]
+
+
+def test_warns_when_no_activy_activities(fakes, capsys):
+    FakeActivyClient.activities = []
+    cli.main(["--since", "2026-09-01", "--activy-only"])
+    assert "no Activy activities found" in capsys.readouterr().err
+
+
+def test_progress_message_format():
+    msg = cli._activy_progress({"contest": 1, "contests": 1, "page": 12, "found": 5,
+                                "reached": "2026-09-14"}, "2026-09-01")
+    assert msg == ("Scanning Activy feed: page 12, 5 of yours so far, reached 2026-09-14 "
+                   "(going back to 2026-09-01) ...")
+    multi = cli._activy_progress({"contest": 2, "contests": 3, "page": 1, "found": 0,
+                                  "reached": ""}, "2026-09-01")
+    assert "(contest 2/3)" in multi and "reached" not in multi
 
 
 def test_default_since_is_30_days_ago():

@@ -87,6 +87,8 @@ class FakeActivy(ActivyClient):
             return 200, [{"Id": c} for c in self.contests]
         if namespace == USER_CONTEST_FEED and not self.ucf_works:
             return 403, None
+        if namespace == USER_CONTEST_FEED and payload.get("UserId") != ME:
+            return 403, None  # the real API rejects UserContestFeed without UserId
         if namespace in (USER_CONTEST_FEED, CONTEST_FEED):
             page = payload.get("Page", 0)
             if page < len(self.pages):
@@ -148,6 +150,42 @@ def test_get_activities_merges_multiple_contests():
     client = TwoContests(pages=[], contests=("c1", "c2"))
     acts = client.get_activities(since="2026-09-01")
     assert sorted(a.id for a in acts) == ["c1-a", "c2-a"]
+
+
+def test_user_contest_feed_is_queried_with_user_id():
+    client = FakeActivy([[activy_event(ME, "2026-09-05", "a1")]])
+    client.get_activities(since="2026-09-01")
+    feed_calls = [p for _, ns, p in client.calls if ns == USER_CONTEST_FEED]
+    assert feed_calls and all(p.get("UserId") == ME for p in feed_calls)
+    assert not any(ns == CONTEST_FEED for _, ns, _ in client.calls)  # no needless fallback
+
+
+def test_stops_when_feed_ignores_paging():
+    class SamePageForever(FakeActivy):
+        def query(self, service, namespace, payload):
+            if namespace in (USER_CONTEST_FEED, CONTEST_FEED):
+                self.calls.append((service, namespace, dict(payload)))
+                return 200, [activy_event(OTHER, "2026-09-28", "b1")]  # always newer than 'since'
+            return super().query(service, namespace, payload)
+
+    client = SamePageForever(pages=[])
+    assert client.get_activities(since="2026-09-01", max_pages=500) == []
+    feed_calls = [1 for _, ns, _ in client.calls if ns == USER_CONTEST_FEED]
+    assert len(feed_calls) <= 3  # probe + page 0 + one repeat, not 500
+
+
+def test_progress_callback_reports_each_page():
+    pages = [
+        [activy_event(ME, "2026-09-20", "a1"), activy_event(OTHER, "2026-09-18", "b1")],
+        [activy_event(ME, "2026-09-10", "a2")],
+        [activy_event(OTHER, "2026-08-20", "b2")],
+    ]
+    seen = []
+    FakeActivy(pages).get_activities(since="2026-09-01", progress=seen.append)
+    assert [p["page"] for p in seen] == [1, 2, 3]
+    assert [p["found"] for p in seen] == [1, 2, 2]
+    assert [p["reached"] for p in seen] == ["2026-09-18", "2026-09-10", "2026-08-20"]
+    assert all(p["contest"] == 1 and p["contests"] == 1 for p in seen)
 
 
 def test_no_contests_returns_empty():

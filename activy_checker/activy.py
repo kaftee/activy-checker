@@ -11,7 +11,7 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Callable
 
 from .models import (
     Activity,
@@ -131,31 +131,55 @@ class ActivyClient:
                 ids.append(cid)
         return ids
 
-    def get_activities(self, since: str, max_pages: int = 500) -> list[Activity]:
+    def get_activities(
+        self,
+        since: str,
+        max_pages: int = 500,
+        progress: Callable[[dict[str, Any]], None] | None = None,
+    ) -> list[Activity]:
         """Return your activities with date >= ``since`` (YYYY-MM-DD).
 
         Activities are read from each contest's feed (there is no dedicated
         list endpoint). The feed is reverse-chronological, so we paginate until
         every event on a page is older than ``since``.
+
+        ``progress``, if given, is called after every feed page with a dict:
+        ``contest`` / ``contests`` (1-based index and total), ``page``
+        (1-based), ``found`` (your activities so far) and ``reached`` (the
+        oldest date seen on that page).
         """
         me = self.user_id
         found: dict[str, Activity] = {}
-        for cid in self.contest_ids():
-            self._collect_contest(cid, me, since, found, max_pages)
+        cids = self.contest_ids()
+        for n, cid in enumerate(cids, 1):
+            report = None
+            if progress:
+                def report(page, reached, n=n):
+                    progress({"contest": n, "contests": len(cids), "page": page,
+                              "found": len(found), "reached": reached})
+            self._collect_contest(cid, me, since, found, max_pages, report)
         return sorted(found.values(), key=lambda a: a.start or "")
 
-    def _collect_contest(self, cid, me, since, found, max_pages) -> None:
-        # pick a working feed
+    def _collect_contest(self, cid, me, since, found, max_pages, report=None) -> None:
+        # UserContestFeed requires both the contest and your user id; without
+        # UserId the API rejects the request.
+        base = {"ContestId": cid, "UserId": me}
         feed = USER_CONTEST_FEED
-        st, arr = self.query("players", feed, {"ContestId": cid, "Page": 0, "PageSize": 50})
+        st, arr = self.query("players", feed, dict(base, Page=0, PageSize=50))
         if st != 200 or not isinstance(arr, list) or not arr:
             feed = CONTEST_FEED
         page = 0
+        previous = None
         while page < max_pages:
-            st, arr = self.query("players", feed,
-                                 {"ContestId": cid, "Page": page, "PageSize": 50})
+            st, arr = self.query("players", feed, dict(base, Page=page, PageSize=50))
             if st != 200 or not isinstance(arr, list) or not arr:
                 break
+            # Guard against a feed that ignores paging and keeps returning the
+            # same page: stop instead of re-reading it until max_pages.
+            signature = json.dumps(arr, sort_keys=True, default=str)
+            if signature == previous:
+                break
+            previous = signature
             page_dates = []
             for ev in arr:
                 date = (ev.get("Date") or "")[:10]
@@ -170,6 +194,8 @@ class ActivyClient:
                 act = _ride_to_activity(ride, ev.get("Date"))
                 if act and act.id not in found:
                     found[act.id] = act
+            if report:
+                report(page + 1, min((d for d in page_dates if d), default=""))
             # early stop: whole page older than 'since'
             if page_dates and max(page_dates) < since:
                 break

@@ -45,7 +45,7 @@ PascalCase:
 | Query | Service | Used for |
 |---|---|---|
 | `Activy.Contests.Contracts.Mobile.Contests.MyContests` | `contests` | Contests you have joined |
-| `Activy.Players.Contracts.Mobile.Newsfeed.UserContestFeed` | `players` | A contest's activity feed |
+| `Activy.Players.Contracts.Mobile.Newsfeed.UserContestFeed` | `players` | A contest's activity feed (needs `ContestId` **and** your `UserId`) |
 | `Activy.Players.Contracts.Mobile.Newsfeed.ContestFeed` | `players` | Fallback feed if the one above is unavailable |
 
 ### Why activities come from contest feeds
@@ -58,10 +58,17 @@ The app has no "list my activities" query. Your activities are visible as
 3. Keeps only `Ride` entries whose `UserId` is yours, dated on or after `--since`.
 4. De-duplicates by `ActivityId` (an activity can appear in several contests or pages).
 
-A contest feed contains **everyone's** activities, newest first. To avoid
-reading the whole history of a large contest, paging stops as soon as a full
-page is older than `--since`. As a safety limit, at most 500 pages are read per
-contest.
+A contest feed contains **everyone's** activities, newest first, so reaching a
+date a few weeks back in a large contest can take a hundred or more requests.
+Paging stops as soon as:
+
+- a full page is older than `--since`,
+- the feed returns the same page again (it ignores paging), or
+- 500 pages have been read (safety limit).
+
+While this runs, the CLI shows a progress line on stderr — the current page,
+how many of your activities were found so far and how far back the feed has
+reached. It is only drawn when stderr is a terminal.
 
 Consequence: Activy activities are only found if you are in at least one
 contest. That is the normal way Activy is used, but see

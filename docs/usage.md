@@ -19,6 +19,14 @@ Progress messages and prompts go to **stderr**; the summaries and the
 comparison go to **stdout**, so `activy-checker > report.txt` captures just the
 report.
 
+Reading Activy can take a minute or two for a longer date range (see
+[how it works](how-it-works.md#why-activities-come-from-contest-feeds)). A live
+progress line shows what is happening:
+
+```
+⠹ Scanning Activy feed: page 57, 21 of yours so far, reached 2026-09-14 (going back to 2026-09-01) ...
+```
+
 ## Options
 
 | Option | Default | Description |
