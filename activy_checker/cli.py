@@ -15,9 +15,7 @@ from .progress import Spinner
 from .report import render_comparison, render_summary, summarize
 
 
-def _default_since() -> str:
-    """First day of the current month."""
-    return datetime.date.today().replace(day=1).isoformat()
+DEFAULT_SINCE = "2026-09-01"
 
 
 def _prompt(label: str, value: str | None) -> str:
@@ -34,8 +32,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="activy-checker",
         description="Compare your Garmin activities against what Activy imported.",
     )
-    p.add_argument("--since", default=_default_since(),
-                   help="Start date YYYY-MM-DD (default: first day of the current month)")
+    p.add_argument("--since", default=DEFAULT_SINCE,
+                   help=f"Start date YYYY-MM-DD (default: {DEFAULT_SINCE})")
     p.add_argument("--until", default=datetime.date.today().isoformat(),
                    help="End date YYYY-MM-DD (default: today)")
     p.add_argument("--activy-email", default=None, help="Activy email (else prompted)")
