@@ -103,6 +103,9 @@ Activy activities are read from the feeds of contests you have joined. If you
 are not in any contest, nothing is found. Also check the date range: the
 default is only the last 30 days.
 
+Version 0.2.0 had a bug that always returned no Activy activities after a long
+wait; upgrade to 0.2.1 or later.
+
 ## Something else
 
 The Activy API is unofficial and may change. If the tool suddenly stops
