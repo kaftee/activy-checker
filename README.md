@@ -2,9 +2,11 @@
 
 [![tests](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml)
 
-Check that your [Garmin Connect](https://connect.garmin.com) activities were
-actually imported into [Activy](https://activy.app) — and get a clean summary of
-your training from both sources.
+Audit [Activy](https://activy.app)'s activity sync: detect activities that
+never arrived and activities recorded with incorrect distances — and get a
+clean summary of your training. It currently compares Activy with
+[Garmin Connect](https://connect.garmin.com); other sources can be
+[requested](#other-integrations).
 
 Activy imports workouts from Garmin, but the import is not always complete: a
 ride can silently never appear, or show up with the wrong distance. If Activy

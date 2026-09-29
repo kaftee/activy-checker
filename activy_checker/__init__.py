@@ -1,4 +1,4 @@
-"""activy-checker: verify that your Garmin activities made it into Activy."""
+"""activy-checker: audit Activy's activity sync."""
 from __future__ import annotations
 
 from .activy import ActivyClient

@@ -31,7 +31,7 @@ def _prompt(label: str, value: str | None) -> str:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="activy-checker",
-        description="Compare your Garmin activities against what Activy imported.",
+        description="Audit Activy's activity sync against Garmin Connect.",
     )
     p.add_argument("--since", default=DEFAULT_SINCE,
                    help=f"Start date YYYY-MM-DD (default: {DEFAULT_SINCE})")
