@@ -18,3 +18,8 @@ activy_dump/
 garmin_dump/
 *.csv
 result.json
+
+# Test artifacts
+.coverage
+.pytest_cache/
+htmlcov/
