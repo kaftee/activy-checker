@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.6
+
+### Added
+- Published on PyPI: `pipx install activy-checker` or `pip install activy-checker`.
+- `publish` workflow: builds, tests and uploads releases to PyPI with Trusted
+  Publishing (manual runs can target TestPyPI).
+- PyPI classifiers and Documentation / Changelog links.
+
+### Changed
+- License metadata uses an SPDX expression (`license = "MIT"`, PEP 639).
+- README links are absolute so they also work on the PyPI project page.
+
 ## 0.2.5
 
 ### Added

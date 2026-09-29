@@ -41,6 +41,19 @@ Python 3.12, 3.13 and 3.14 for every push and pull request.
   mapping, its test, and the tables in [docs/how-it-works.md](docs/how-it-works.md).
 - Code, comments and documentation are in English.
 
+## Releasing (maintainers)
+
+Releases are published to PyPI by the `publish` GitHub Actions workflow using
+[Trusted Publishing](https://docs.pypi.org/trusted-publishers/), so no API
+tokens are stored anywhere.
+
+1. Bump `version` in `pyproject.toml` and `__version__` in
+   `activy_checker/__init__.py`, and add a `CHANGELOG.md` entry.
+2. Optional dry run: in the Actions tab, run **publish** manually with
+   `testpypi`, then check `pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ activy-checker`.
+3. Create a GitHub release with tag `vX.Y.Z` matching the version. Publishing
+   the release uploads it to PyPI.
+
 ## Reporting a bug
 
 Please include the command you ran, the error output, and your Python and
