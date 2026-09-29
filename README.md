@@ -57,7 +57,7 @@ code.
 ## Common commands
 
 ```bash
-activy-checker                                   # last 30 days
+activy-checker                                   # from the 1st of this month
 activy-checker --since 2026-09-01 --until 2026-09-30
 activy-checker --activy-only                     # just summarize Activy
 activy-checker --garmin-tokenstore ~/.garminconnect   # cache Garmin session

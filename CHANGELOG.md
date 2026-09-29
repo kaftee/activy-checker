@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+### Changed
+- `--since` now defaults to the first day of the current month (was 30 days ago).
+
+### Fixed
+- Ctrl+C prints `Aborted.` and exits with code 130 instead of a traceback.
+
 ## 0.2.1
 
 ### Fixed

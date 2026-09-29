@@ -31,7 +31,7 @@ progress line shows what is happening:
 
 | Option | Default | Description |
 |---|---|---|
-| `--since YYYY-MM-DD` | 30 days ago | First day to include (by local start date). |
+| `--since YYYY-MM-DD` | first day of the current month | First day to include (by local start date). |
 | `--until YYYY-MM-DD` | today | Last day to include. |
 | `--activy-email EMAIL` | prompted | Activy login email. The password is always prompted. |
 | `--garmin-email EMAIL` | prompted | Garmin login email. The password is always prompted. |
@@ -76,6 +76,7 @@ The Activy session is not cached; you sign in to Activy on every run.
 | `0` | Success (differences found are **not** an error). |
 | `2` | Activy failed: bad credentials, network error, or an unexpected response. |
 | `3` | Garmin failed: bad credentials, MFA, rate limit, or network error. |
+| `130` | Interrupted with Ctrl+C. |
 
 ## JSON output
 
