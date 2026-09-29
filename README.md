@@ -6,7 +6,7 @@ Audit [Activy](https://activy.app)'s activity sync: detect activities that
 never arrived and activities recorded with incorrect distances — and get a
 clean summary of your training. It currently compares Activy with
 [Garmin Connect](https://connect.garmin.com); other sources can be
-[requested](#other-integrations).
+[requested](https://github.com/kaftee/activy-checker#other-integrations).
 
 Activy imports workouts from Garmin, but the import is not always complete: a
 ride can silently never appear, or show up with the wrong distance. If Activy
@@ -56,20 +56,20 @@ can change without notice and break the tool.
 
 ## Quick start
 
-Requires **Python 3.12+**.
+Requires **Python 3.12+**. The easiest way is [pipx](https://pipx.pypa.io),
+which installs the command in its own environment:
 
 ```bash
-git clone https://github.com/kaftee/activy-checker.git
-cd activy-checker
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
-
-activy-checker --since 2026-09-01
+pipx install activy-checker
+activy-checker --garmin-tokenstore ~/.garminconnect
 ```
 
-You will be asked for your Activy email and password, then your Garmin email,
-password and — if your Garmin account uses two-factor authentication — the MFA
-code.
+or with pip: `pip install activy-checker`. To work on the code, see
+[Contributing](https://github.com/kaftee/activy-checker/blob/main/CONTRIBUTING.md).
+
+You will be asked for your Activy email and password, then your Garmin email
+and password and — if your Garmin account uses two-step verification — the
+code Garmin emails you.
 
 ## Common commands
 
@@ -81,7 +81,7 @@ activy-checker --garmin-tokenstore ~/.garminconnect   # cache Garmin session
 activy-checker --since 2026-09-01 --json result.json  # machine-readable output
 ```
 
-All options are described in [docs/usage.md](docs/usage.md).
+All options are described in [docs/usage.md](https://github.com/kaftee/activy-checker/blob/main/docs/usage.md).
 
 ## Example output
 
@@ -127,11 +127,11 @@ line up one-to-one — the comparison matches individual activities, not kinds.
 
 ## Documentation
 
-- [Usage](docs/usage.md) — every option, exit codes, JSON format, using it as a library
-- [How it works](docs/how-it-works.md) — the Activy API, fetching, matching rules, type mapping
-- [Troubleshooting](docs/troubleshooting.md) — login problems, Garmin rate limits, reading the results
-- [Contributing](CONTRIBUTING.md) — development setup and tests
-- [Changelog](CHANGELOG.md)
+- [Usage](https://github.com/kaftee/activy-checker/blob/main/docs/usage.md) — every option, exit codes, JSON format, using it as a library
+- [How it works](https://github.com/kaftee/activy-checker/blob/main/docs/how-it-works.md) — the Activy API, fetching, matching rules, type mapping
+- [Troubleshooting](https://github.com/kaftee/activy-checker/blob/main/docs/troubleshooting.md) — login problems, Garmin rate limits, reading the results
+- [Contributing](https://github.com/kaftee/activy-checker/blob/main/CONTRIBUTING.md) — development setup, tests and releases
+- [Changelog](https://github.com/kaftee/activy-checker/blob/main/CHANGELOG.md)
 
 ## Other integrations
 
@@ -145,4 +145,4 @@ Found a bug? [Report it here](https://github.com/kaftee/activy-checker/issues/ne
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/kaftee/activy-checker/blob/main/LICENSE).

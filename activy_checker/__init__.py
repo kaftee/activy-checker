@@ -7,7 +7,7 @@ from .garmin import GarminClient
 from .models import Activity
 from .report import render_comparison, render_summary, summarize
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __all__ = [
     "ActivyClient",
     "GarminClient",
