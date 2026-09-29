@@ -1,5 +1,7 @@
 # activy-checker
 
+[![tests](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml)
+
 Verify that your [Garmin Connect](https://connect.garmin.com) activities were
 correctly imported into [Activy](https://activy.app), and get a clean summary of
 your activities from both sources.
@@ -22,6 +24,8 @@ credentials. Use it only with **your own account and your own data**, at your
 own risk. Not affiliated with or endorsed by Activy or Garmin.
 
 ## Install
+
+Requires Python 3.12+.
 
 ```bash
 git clone https://github.com/kaftee/activy-checker.git
@@ -85,9 +89,19 @@ Matched: 44 | Missing in Activy: 1 | Missing in Garmin: 0 | Distance mismatches:
 - **Matching**: by `date + duration` (Activy copies Garmin's duration to the
   second), which is more robust than matching on distance.
 
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest --cov=activy_checker
+```
+
+The test suite runs fully offline: API clients are replaced with in-memory
+fakes and all fixtures are synthetic, so no accounts or network are needed.
+
 ## Roadmap
 
-- [ ] Tests
+- [x] Tests
 - [ ] Documentation
 
 ## License
