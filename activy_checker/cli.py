@@ -7,6 +7,7 @@ import getpass
 import json
 import sys
 
+from . import __version__
 from .activy import ActivyClient, ActivyError
 from .compare import compare
 from .garmin import GarminClient
@@ -52,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Write the full result as JSON to this path")
     p.add_argument("--verbose", action="store_true",
                    help="Show the Garmin library's sign-in messages (hidden by default)")
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
 
 

@@ -1,0 +1,41 @@
+name: Feature request / new integration
+description: Ask for support for another service (Strava, Polar, Suunto, ...) or a new feature.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please do **not** paste passwords, tokens or personal data.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is this about?
+      options:
+        - New integration (another service to compare with Activy)
+        - Improvement to an existing feature
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: service
+    attributes:
+      label: Service
+      description: For a new integration, which service do you sync with Activy?
+      options:
+        - Strava
+        - Polar
+        - Suunto
+        - Apple Health
+        - Samsung Health
+        - Other (describe below)
+        - Not applicable
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe what you would like
+      description: What should activy-checker do, and why would it help you?
+    validations:
+      required: true

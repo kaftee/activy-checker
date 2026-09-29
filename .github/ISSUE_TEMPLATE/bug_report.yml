@@ -1,0 +1,39 @@
+name: Bug report
+description: Something does not work as expected.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do **not** paste passwords, tokens, email addresses or other personal data.
+        Check [troubleshooting](https://github.com/kaftee/activy-checker/blob/main/docs/troubleshooting.md) first.
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: activy-checker --since 2026-09-01 --garmin-tokenstore ~/.garminconnect
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What happened
+      description: Paste the error or output. Running with --verbose adds Garmin sign-in details.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: false
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `activy-checker --version`, `python --version` and `pip show garminconnect | grep Version`
+      placeholder: "activy-checker 0.2.5, garminconnect 0.3.17, Python 3.13"
+    validations:
+      required: true

@@ -227,6 +227,15 @@ def test_garmin_failure_shows_captured_details(fakes, capsys):
     assert "returned 429" in err
 
 
+def test_version_flag(capsys):
+    from activy_checker import __version__
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--version"])
+    assert exc.value.code == 0
+    assert capsys.readouterr().out.strip() == f"activy-checker {__version__}"
+
+
 def test_default_since_is_fixed_date():
     assert cli.build_parser().parse_args([]).since == "2026-09-01"
 
