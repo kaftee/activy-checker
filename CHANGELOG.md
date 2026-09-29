@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.4
+
+### Changed
+- Garmin sign-in is quiet: the library's per-strategy warnings (e.g.
+  `mobile+cffi returned 429 …`) are no longer printed. They are kept and shown
+  under "Garmin sign-in details" if sign-in fails.
+- The MFA prompt says a verification code was emailed and that the tool is
+  waiting for it.
+
+### Added
+- `--verbose` to show the Garmin library's sign-in messages.
+
 ## 0.2.3
 
 ### Changed

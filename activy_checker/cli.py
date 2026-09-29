@@ -50,7 +50,13 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Distance difference above which a match is reported as a mismatch (default: 0.5)")
     p.add_argument("--json", dest="json_out", default=None,
                    help="Write the full result as JSON to this path")
+    p.add_argument("--verbose", action="store_true",
+                   help="Show the Garmin library's sign-in messages (hidden by default)")
     return p
+
+
+MFA_PROMPT = ("Garmin has sent you a verification code (check your email).\n"
+              "Enter the code to continue: ")
 
 
 def _activy_progress(p: dict, since: str) -> str:
@@ -108,7 +114,7 @@ def _run(argv: list[str] | None) -> int:
 
     # --- Garmin ---
     print(f"\nFetching Garmin activities since {args.since}.", file=sys.stderr)
-    garmin = GarminClient(tokenstore=args.garmin_tokenstore)
+    garmin = GarminClient(tokenstore=args.garmin_tokenstore, quiet=not args.verbose)
     try:
         with Spinner("Checking for a saved Garmin session ..."):
             resumed = garmin.try_resume()
@@ -120,11 +126,15 @@ def _run(argv: list[str] | None) -> int:
             # No spinner here: garminconnect may ask for an MFA code and print
             # its own messages, which an animated line would overwrite.
             print("Signing in to Garmin (this can take a moment) ...", file=sys.stderr)
-            garmin.login(gemail, gpass, mfa_prompt=lambda: _prompt("Garmin MFA code: ", None))
+            garmin.login(gemail, gpass, mfa_prompt=lambda: _prompt(MFA_PROMPT, None))
         with Spinner(f"Fetching Garmin activities {args.since} .. {args.until} ..."):
             garmin_acts = garmin.get_activities(args.since, args.until)
     except Exception as e:  # garminconnect raises its own exception types
         print(f"Garmin error: {e}", file=sys.stderr)
+        if garmin.log and not args.verbose:
+            print("Garmin sign-in details:", file=sys.stderr)
+            for line in garmin.log[-5:]:
+                print(f"  {line}", file=sys.stderr)
         return 3
     garmin_acts = [a for a in garmin_acts if args.since <= a.date <= args.until]
     print()
