@@ -9,8 +9,8 @@ import sys
 
 from .activy import ActivyClient, ActivyError
 from .compare import compare
-from .garmin import GarminClient, GarminError
-from .models import Activity
+from .garmin import GarminClient
+from .models import KIND_STEPS, Activity
 from .report import render_comparison, render_summary, summarize
 
 
@@ -19,7 +19,12 @@ def _default_since() -> str:
 
 
 def _prompt(label: str, value: str | None) -> str:
-    return value if value else input(label).strip()
+    """Return ``value`` or ask for it. The prompt goes to stderr so stdout stays a clean report."""
+    if value:
+        return value
+    sys.stderr.write(label)
+    sys.stderr.flush()
+    return input().strip()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,7 +41,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--activy-only", action="store_true",
                    help="Only fetch and summarize Activy (skip Garmin and comparison)")
     p.add_argument("--garmin-tokenstore", default=None,
-                   help="Path to cache the Garmin session (avoids repeated MFA)")
+                   help="Directory or .json file to cache the Garmin session (avoids repeated MFA)")
+    p.add_argument("--include-steps", action="store_true",
+                   help="Keep Activy step-count entries (excluded by default: they have no Garmin activity)")
+    p.add_argument("--duration-tolerance", type=int, default=8, metavar="SECONDS",
+                   help="Max duration difference for two activities to match (default: 8)")
+    p.add_argument("--distance-tolerance", type=float, default=0.5, metavar="KM",
+                   help="Distance difference above which a match is reported as a mismatch (default: 0.5)")
     p.add_argument("--json", dest="json_out", default=None,
                    help="Write the full result as JSON to this path")
     return p
@@ -61,10 +72,12 @@ def main(argv: list[str] | None = None) -> int:
         password = getpass.getpass("Activy password (hidden): ")
         activy.login(email, password)
         activy_acts = activy.get_activities(args.since)
-    except ActivyError as e:
+    except (ActivyError, OSError, ValueError) as e:  # OSError covers network errors
         print(f"Activy error: {e}", file=sys.stderr)
         return 2
     activy_acts = [a for a in activy_acts if args.since <= a.date <= args.until]
+    if not args.include_steps:
+        activy_acts = [a for a in activy_acts if a.kind != KIND_STEPS]
     print(render_summary("Activy", activy_acts))
 
     if args.activy_only:
@@ -76,11 +89,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nFetching Garmin activities since {args.since} ...", file=sys.stderr)
     garmin = GarminClient(tokenstore=args.garmin_tokenstore)
     try:
-        gemail = _prompt("Garmin email: ", args.garmin_email)
-        gpass = getpass.getpass("Garmin password (hidden): ") if not args.garmin_tokenstore else None
-        garmin.login(gemail, gpass)
+        if garmin.try_resume():
+            print("Resumed saved Garmin session.", file=sys.stderr)
+        else:
+            gemail = _prompt("Garmin email: ", args.garmin_email)
+            gpass = getpass.getpass("Garmin password (hidden): ")
+            garmin.login(gemail, gpass, mfa_prompt=lambda: _prompt("Garmin MFA code: ", None))
         garmin_acts = garmin.get_activities(args.since, args.until)
-    except GarminError as e:
+    except Exception as e:  # garminconnect raises its own exception types
         print(f"Garmin error: {e}", file=sys.stderr)
         return 3
     garmin_acts = [a for a in garmin_acts if args.since <= a.date <= args.until]
@@ -88,7 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     print(render_summary("Garmin", garmin_acts))
 
     # --- comparison ---
-    result = compare(activy_acts, garmin_acts)
+    result = compare(activy_acts, garmin_acts,
+                     duration_tolerance_s=args.duration_tolerance,
+                     distance_tolerance_km=args.distance_tolerance)
     print()
     print(render_comparison(result))
 

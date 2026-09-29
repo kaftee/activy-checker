@@ -59,31 +59,34 @@ def test_get_activities_uses_api():
     assert [a.kind for a in acts] == ["bike", "walk"]
 
 
-def _install_fake_garminconnect(monkeypatch, resume_ok):
-    """Register a fake `garminconnect` module and return the list of created instances."""
+def _install_fake_garminconnect(monkeypatch, resume_ok, fresh_login_ok=True):
+    """Register a fake `garminconnect` module and return the list of created instances.
+
+    Mirrors garminconnect 0.3 semantics: ``login(tokenstore)`` loads a saved
+    session if one exists; otherwise it logs in with the credentials and
+    persists the new session to ``tokenstore``.
+    """
     import sys
     import types
 
     created = []
 
-    class FakeGarth:
-        def __init__(self):
-            self.dumped_to = None
-
-        def dump(self, path):
-            self.dumped_to = path
-
     class FakeGarmin:
         def __init__(self, email=None, password=None, prompt_mfa=None, **kw):
             self.email, self.password, self.prompt_mfa = email, password, prompt_mfa
-            self.garth = FakeGarth()
             self.login_args = None
+            self.saved_to = None
             created.append(self)
 
         def login(self, tokenstore=None):
             self.login_args = tokenstore
-            if tokenstore is not None and not resume_ok:
-                raise RuntimeError("no saved session")
+            if tokenstore is not None and resume_ok:
+                return None, None
+            if not self.email or not self.password:
+                raise RuntimeError("Username and password are required")
+            if not fresh_login_ok:
+                raise RuntimeError("429 Too Many Requests")
+            self.saved_to = tokenstore
             return None, None
 
     fake = types.ModuleType("garminconnect")
@@ -115,7 +118,7 @@ def test_fresh_login_passes_mfa_prompt_and_saves_session(monkeypatch, tmp_path):
     fresh = created[-1]
     assert fresh.email == "someone@example.com"
     assert fresh.prompt_mfa is prompt
-    assert fresh.garth.dumped_to == str(tmp_path)
+    assert fresh.saved_to == str(tmp_path)  # session persisted for the next run
     assert client._api is fresh
 
 
@@ -124,4 +127,23 @@ def test_fresh_login_without_tokenstore(monkeypatch):
     client = GarminClient()
     client.login("someone@example.com", "secret")
     assert len(created) == 1  # no resume attempt without a tokenstore
-    assert created[0].garth.dumped_to is None
+    assert created[0].saved_to is None
+
+
+def test_try_resume_without_tokenstore_is_false(monkeypatch):
+    created = _install_fake_garminconnect(monkeypatch, resume_ok=True)
+    assert GarminClient().try_resume() is False
+    assert created == []
+
+
+def test_try_resume_missing_session_is_false(monkeypatch, tmp_path):
+    _install_fake_garminconnect(monkeypatch, resume_ok=False)
+    client = GarminClient(tokenstore=str(tmp_path))
+    assert client.try_resume() is False
+    assert client._api is None
+
+
+def test_failed_fresh_login_raises_garmin_error(monkeypatch):
+    _install_fake_garminconnect(monkeypatch, resume_ok=False, fresh_login_ok=False)
+    with pytest.raises(GarminError, match="429"):
+        GarminClient().login("someone@example.com", "secret")

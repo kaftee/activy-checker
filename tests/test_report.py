@@ -21,6 +21,11 @@ def test_summarize_totals():
     assert s["by_kind"]["run"]["duration_s"] == 1200
 
 
+def test_summarize_rounds_per_kind_distance():
+    acts = [mk("activy", "2026-09-01", 60, 0.1), mk("activy", "2026-09-01", 60, 0.2)]
+    assert summarize(acts)["by_kind"]["bike"]["distance_km"] == 0.3
+
+
 def test_summarize_empty():
     s = summarize([])
     assert s["total"] == {"count": 0, "distance_km": 0, "duration_s": 0}

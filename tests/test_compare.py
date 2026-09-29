@@ -70,6 +70,14 @@ def test_several_activities_same_day_are_paired_by_duration():
     assert pairs == {"short": "g-short", "long": "g-long"}
 
 
+def test_picks_closest_duration_not_first_within_tolerance():
+    a = [mk("activy", "2026-09-01", 3600, id="a")]
+    g = [mk("garmin", "2026-09-01", 3607, id="g-far"), mk("garmin", "2026-09-01", 3601, id="g-near")]
+    r = compare(a, g)
+    assert r.matched[0].garmin.id == "g-near"
+    assert [x.id for x in r.only_garmin] == ["g-far"]
+
+
 def test_empty_inputs():
     r = compare([], [])
     assert r.matched == [] and r.only_activy == [] and r.only_garmin == []

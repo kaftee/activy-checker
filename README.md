@@ -2,107 +2,119 @@
 
 [![tests](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml)
 
-Verify that your [Garmin Connect](https://connect.garmin.com) activities were
-correctly imported into [Activy](https://activy.app), and get a clean summary of
-your activities from both sources.
+Check that your [Garmin Connect](https://connect.garmin.com) activities were
+actually imported into [Activy](https://activy.app) — and get a clean summary of
+your training from both sources.
 
-Activy imports activities from Garmin, but the import is not always complete —
-a ride can silently fail to appear, or be recorded with a wrong distance.
-`activy-checker` logs into **your** Activy and Garmin accounts, pulls your
-activities from a given date, and reports:
+Activy imports workouts from Garmin, but the import is not always complete: a
+ride can silently never appear, or show up with the wrong distance. If Activy
+powers a company or charity challenge, those gaps cost you points.
+`activy-checker` logs into **your** two accounts, pulls your activities for a
+date range and tells you exactly what is different.
 
-- **Missing in Activy** — activities present in Garmin but not imported.
-- **Missing in Garmin** — activities present only in Activy.
-- **Distance mismatches** — the same activity recorded with different distance.
-- A per-kind **summary** (count, distance, time) for each source.
+```
+Matched: 5 | Missing in Activy: 1 | Missing in Garmin: 0 | Distance mismatches: 1
+
+-- Missing in Activy (present in Garmin, not imported) [1] --
+  2026-05-10  road_biking          98.40 km  3:12:00
+```
+
+## Features
+
+- **Missing in Activy** — activities recorded on Garmin that never reached Activy.
+- **Missing in Garmin** — activities that exist only in Activy (e.g. manual entries).
+- **Distance mismatches** — the same activity stored with a different distance.
+- **Summaries** — count, distance and time per activity kind, for each source.
+- **JSON export** of everything above, for your own scripts or a support ticket.
+- Passwords are prompted with `getpass` and never stored; the Garmin session can
+  optionally be cached so MFA is needed only once.
 
 ## Disclaimer
 
-This is an **unofficial** tool. Activy has no public API, so this project talks
-to the same mobile endpoints the Activy app uses, authenticating with your own
-credentials. Use it only with **your own account and your own data**, at your
-own risk. Not affiliated with or endorsed by Activy or Garmin.
+This is an **unofficial** tool, not affiliated with or endorsed by Activy or
+Garmin. Activy has no public API, so `activy-checker` talks to the same mobile
+endpoints the Activy app uses, signing in with your own credentials. Use it only
+with **your own account and your own data**, at your own risk. The Activy API
+can change without notice and break the tool.
 
-## Install
+## Quick start
 
-Requires Python 3.12+.
+Requires **Python 3.12+**.
 
 ```bash
 git clone https://github.com/kaftee/activy-checker.git
 cd activy-checker
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
+
+activy-checker --since 2026-09-01
 ```
 
-## Usage
+You will be asked for your Activy email and password, then your Garmin email,
+password and — if your Garmin account uses two-factor authentication — the MFA
+code.
+
+## Common commands
 
 ```bash
-# Compare the last 30 days (default)
-activy-checker
-
-# Compare a specific range
-activy-checker --since 2026-09-01 --until 2026-09-29
-
-# Only fetch and summarize Activy
-activy-checker --activy-only
-
-# Save the full result as JSON
-activy-checker --since 2026-09-01 --json result.json
-
-# Cache the Garmin session so you are not asked for MFA every run
-activy-checker --garmin-tokenstore ~/.garminconnect
+activy-checker                                   # last 30 days
+activy-checker --since 2026-09-01 --until 2026-09-30
+activy-checker --activy-only                     # just summarize Activy
+activy-checker --garmin-tokenstore ~/.garminconnect   # cache Garmin session
+activy-checker --since 2026-09-01 --json result.json  # machine-readable output
 ```
 
-You are prompted for each account's email and password interactively
-(passwords are read with `getpass` and never stored by the tool). If your
-Garmin account uses MFA, you are asked for the code once.
+All options are described in [docs/usage.md](docs/usage.md).
 
-### Example output
+## Example output
 
 ```
 == Activy ==
 
-Kind         Count     Distance       Time
+Kind       Count     Distance       Time
 ----------------------------------------
-Bike            18      791.6 km    ...
-Run             17       99.0 km    ...
-Exercise         9        0.0 km    ...
+Bike           2     103.5 km    3:31:00
+Run            2       9.3 km    1:27:00
+Exercise       1       0.0 km    0:25:00
 ----------------------------------------
-TOTAL           44      890.6 km    ...
+TOTAL          5     112.8 km    5:23:00
+
+== Garmin ==
+
+Kind       Count     Distance       Time
+----------------------------------------
+Bike           3     201.9 km    6:43:01
+Run            1       5.2 km    0:32:01
+Walk           1       9.9 km    0:55:01
+Exercise       1       0.0 km    0:25:00
+----------------------------------------
+TOTAL          6     217.0 km    8:35:03
 
 == Comparison: Activy vs Garmin ==
 
-Matched: 44 | Missing in Activy: 1 | Missing in Garmin: 0 | Distance mismatches: 1
+Matched: 5 | Missing in Activy: 1 | Missing in Garmin: 0 | Distance mismatches: 1
 
 -- Missing in Activy (present in Garmin, not imported) [1] --
-  2026-09-27  road_biking        106.23 km  3:20:03
+  2026-05-10  road_biking          98.40 km  3:12:00
+
+-- Missing in Garmin (present in Activy only) [0] --
+  (none)
+
+-- Distance mismatches (same activity, different distance) [1] --
+  2026-05-05  Activy    4.10 km  vs Garmin    9.87 km  (Δ -5.77 km)
 ```
 
-## How it works
+(Sample data.) Note that the two summaries use each service's own categories:
+Activy files Garmin walks and hikes under **Run**, so kinds are not expected to
+line up one-to-one — the comparison matches individual activities, not kinds.
 
-- **Activy**: OpenID Connect password grant against `players.v3.activy.pl`,
-  then CQRS-style `POST /api/query/<contract>` calls. Activities are read from
-  each contest's feed (there is no dedicated list endpoint) and filtered to your
-  own `userId`.
-- **Garmin**: uses the [`garminconnect`](https://pypi.org/project/garminconnect/)
-  library.
-- **Matching**: by `date + duration` (Activy copies Garmin's duration to the
-  second), which is more robust than matching on distance.
+## Documentation
 
-## Development
-
-```bash
-pip install -e ".[dev]"
-pytest --cov=activy_checker
-```
-
-The test suite runs fully offline: API clients are replaced with in-memory
-fakes and all fixtures are synthetic, so no accounts or network are needed.
-
-## Roadmap
-
-- [x] Tests
-- [ ] Documentation
+- [Usage](docs/usage.md) — every option, exit codes, JSON format, using it as a library
+- [How it works](docs/how-it-works.md) — the Activy API, fetching, matching rules, type mapping
+- [Troubleshooting](docs/troubleshooting.md) — login problems, Garmin rate limits, reading the results
+- [Contributing](CONTRIBUTING.md) — development setup and tests
+- [Changelog](CHANGELOG.md)
 
 ## License
 

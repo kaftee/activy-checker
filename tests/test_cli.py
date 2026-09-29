@@ -10,11 +10,11 @@ from .conftest import make_activity as mk
 
 class FakeActivyClient:
     activities = []
-    fail = False
+    fail = None  # exception instance to raise from login()
 
     def login(self, email, password):
         if self.fail:
-            raise ActivyError("bad credentials")
+            raise self.fail
         self.email = email
 
     def get_activities(self, since):
@@ -23,14 +23,22 @@ class FakeActivyClient:
 
 class FakeGarminClient:
     activities = []
+    has_saved_session = False
+    logins = []
+    fetch_error = None
 
     def __init__(self, tokenstore=None):
         self.tokenstore = tokenstore
 
+    def try_resume(self):
+        return bool(self.tokenstore) and self.has_saved_session
+
     def login(self, email=None, password=None, mfa_prompt=None):
-        pass
+        FakeGarminClient.logins.append((email, password))
 
     def get_activities(self, since, until=None):
+        if self.fetch_error:
+            raise self.fetch_error
         return list(self.activities)
 
 
@@ -40,7 +48,10 @@ def fakes(monkeypatch):
         mk("activy", "2026-09-01", 3600, 30.0),
         mk("activy", "2026-08-15", 3600, 30.0),  # outside the range, filtered out
     ]
-    FakeActivyClient.fail = False
+    FakeActivyClient.fail = None
+    FakeGarminClient.has_saved_session = False
+    FakeGarminClient.logins = []
+    FakeGarminClient.fetch_error = None
     FakeGarminClient.activities = [
         mk("garmin", "2026-09-01", 3600, 30.0),
         mk("garmin", "2026-09-27", 12003, 106.23),
@@ -80,10 +91,85 @@ def test_json_output(fakes, tmp_path):
 
 
 def test_activy_login_failure_returns_error_code(fakes, capsys):
-    FakeActivyClient.fail = True
+    FakeActivyClient.fail = ActivyError("bad credentials")
     rc = cli.main(["--since", "2026-09-01"])
     assert rc == 2
     assert "Activy error" in capsys.readouterr().err
+
+
+def test_network_error_is_reported_not_raised(fakes, capsys):
+    import urllib.error
+
+    FakeActivyClient.fail = urllib.error.URLError("no route to host")
+    rc = cli.main(["--since", "2026-09-01"])
+    assert rc == 2
+    assert "no route to host" in capsys.readouterr().err
+
+
+def test_garmin_failure_returns_error_code(fakes, capsys):
+    FakeGarminClient.fetch_error = RuntimeError("429 Too Many Requests")
+    rc = cli.main(["--since", "2026-09-01"])
+    assert rc == 3
+    assert "Garmin error: 429" in capsys.readouterr().err
+
+
+def test_steps_entries_are_excluded_by_default(fakes, tmp_path):
+    FakeActivyClient.activities.append(mk("activy", "2026-09-02", 0, 4.2, kind="steps", raw_type="3"))
+    path = tmp_path / "r.json"
+    cli.main(["--since", "2026-09-01", "--until", "2026-09-30", "--json", str(path)])
+    data = json.loads(path.read_text())
+    assert data["activy"]["summary"]["total"]["count"] == 1
+    assert data["comparison"]["missing_in_garmin"] == []
+
+
+def test_include_steps_keeps_them(fakes, tmp_path):
+    FakeActivyClient.activities.append(mk("activy", "2026-09-02", 0, 4.2, kind="steps", raw_type="3"))
+    path = tmp_path / "r.json"
+    cli.main(["--since", "2026-09-01", "--until", "2026-09-30", "--include-steps", "--json", str(path)])
+    data = json.loads(path.read_text())
+    assert data["activy"]["summary"]["total"]["count"] == 2
+    assert len(data["comparison"]["missing_in_garmin"]) == 1
+
+
+def test_tolerance_flags_are_applied(fakes, tmp_path):
+    FakeActivyClient.activities = [mk("activy", "2026-09-01", 3600, 30.0)]
+    FakeGarminClient.activities = [mk("garmin", "2026-09-01", 3620, 30.3)]
+    path = tmp_path / "r.json"
+    cli.main(["--since", "2026-09-01", "--json", str(path)])
+    assert json.loads(path.read_text())["comparison"]["matched"] == 0
+    cli.main(["--since", "2026-09-01", "--duration-tolerance", "30",
+              "--distance-tolerance", "0.1", "--json", str(path)])
+    cmp_ = json.loads(path.read_text())["comparison"]
+    assert cmp_["matched"] == 1
+    assert len(cmp_["distance_mismatches"]) == 1
+
+
+def test_tokenstore_first_run_prompts_for_password(fakes, tmp_path):
+    rc = cli.main(["--since", "2026-09-01", "--garmin-tokenstore", str(tmp_path)])
+    assert rc == 0
+    assert FakeGarminClient.logins == [("someone@example.com", "pw")]
+
+
+def test_tokenstore_saved_session_skips_login(fakes, tmp_path, capsys):
+    FakeGarminClient.has_saved_session = True
+    rc = cli.main(["--since", "2026-09-01", "--garmin-tokenstore", str(tmp_path)])
+    assert rc == 0
+    assert FakeGarminClient.logins == []
+    assert "Resumed saved Garmin session" in capsys.readouterr().err
+
+
+def test_prompts_go_to_stderr_not_stdout(fakes, capsys):
+    cli.main(["--since", "2026-09-01"])
+    captured = capsys.readouterr()
+    assert "Activy email:" in captured.err
+    assert "Garmin email:" in captured.err
+    assert "email:" not in captured.out
+
+
+def test_email_flags_skip_prompts(fakes, capsys):
+    cli.main(["--since", "2026-09-01", "--activy-email", "a@example.com", "--garmin-email", "g@example.com"])
+    assert "email:" not in capsys.readouterr().err
+    assert FakeGarminClient.logins == [("g@example.com", "pw")]
 
 
 def test_default_since_is_30_days_ago():

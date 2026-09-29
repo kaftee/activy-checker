@@ -20,7 +20,9 @@ def summarize(activities: list[Activity]) -> dict:
         "distance_km": round(sum(a.distance_km for a in activities), 2),
         "duration_s": sum(a.duration_s for a in activities),
     }
-    return {"by_kind": {k: v for k, v in by_kind.items()}, "total": total}
+    for b in by_kind.values():
+        b["distance_km"] = round(b["distance_km"], 2)
+    return {"by_kind": dict(by_kind), "total": total}
 
 
 def render_summary(title: str, activities: list[Activity]) -> str:
