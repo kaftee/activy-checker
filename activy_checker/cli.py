@@ -16,7 +16,8 @@ from .report import render_comparison, render_summary, summarize
 
 
 def _default_since() -> str:
-    return (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    """First day of the current month."""
+    return datetime.date.today().replace(day=1).isoformat()
 
 
 def _prompt(label: str, value: str | None) -> str:
@@ -34,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Compare your Garmin activities against what Activy imported.",
     )
     p.add_argument("--since", default=_default_since(),
-                   help="Start date YYYY-MM-DD (default: 30 days ago)")
+                   help="Start date YYYY-MM-DD (default: first day of the current month)")
     p.add_argument("--until", default=datetime.date.today().isoformat(),
                    help="End date YYYY-MM-DD (default: today)")
     p.add_argument("--activy-email", default=None, help="Activy email (else prompted)")
@@ -70,6 +71,14 @@ def _activity_dict(a: Activity) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _run(argv)
+    except KeyboardInterrupt:
+        print("\nAborted.", file=sys.stderr)
+        return 130
+
+
+def _run(argv: list[str] | None) -> int:
     args = build_parser().parse_args(argv)
 
     # --- Activy ---
