@@ -43,12 +43,41 @@ class GarminError(RuntimeError):
     pass
 
 
+def _garmin_class():
+    try:
+        from garminconnect import Garmin
+    except ImportError as e:  # pragma: no cover
+        raise GarminError(
+            "The 'garminconnect' package is required. Install with: pip install garminconnect"
+        ) from e
+    return Garmin
+
+
 class GarminClient:
-    """Wraps `garminconnect.Garmin`, normalizing results to `Activity`."""
+    """Wraps `garminconnect.Garmin`, normalizing results to `Activity`.
+
+    ``tokenstore`` is an optional directory (tokens are kept in
+    ``garmin_tokens.json`` inside it) or a path to a ``.json`` file. When set,
+    a saved session is reused and a fresh login is persisted there, so MFA is
+    only needed once.
+    """
 
     def __init__(self, tokenstore: str | None = None):
         self.tokenstore = tokenstore
         self._api = None
+
+    def try_resume(self) -> bool:
+        """Resume a saved session from ``tokenstore``; return True on success."""
+        if not self.tokenstore:
+            return False
+        Garmin = _garmin_class()
+        try:
+            api = Garmin()
+            api.login(self.tokenstore)
+        except Exception:
+            return False
+        self._api = api
+        return True
 
     def login(
         self,
@@ -56,38 +85,20 @@ class GarminClient:
         password: str | None = None,
         mfa_prompt: Callable[[], str] | None = None,
     ) -> None:
-        try:
-            from garminconnect import Garmin
-        except ImportError as e:  # pragma: no cover
-            raise GarminError(
-                "The 'garminconnect' package is required. Install with: pip install garminconnect"
-            ) from e
-
-        # 1) try to resume a saved session
-        if self.tokenstore:
-            try:
-                api = Garmin()
-                api.login(self.tokenstore)
-                self._api = api
-                return
-            except Exception:
-                pass
-
-        # 2) fresh login (may require MFA)
+        """Log in, reusing a saved session when possible (may prompt for MFA)."""
+        if self.try_resume():
+            return
         if not email or not password:
             raise GarminError("Garmin email and password are required for a fresh login")
+        Garmin = _garmin_class()
         api = Garmin(email=email, password=password,
                      prompt_mfa=mfa_prompt or (lambda: input("Garmin MFA code: ").strip()))
-        api.login()
+        try:
+            # With a tokenstore, garminconnect persists the new session itself.
+            api.login(self.tokenstore)
+        except Exception as e:
+            raise GarminError(f"Garmin login failed: {e}") from e
         self._api = api
-        if self.tokenstore:
-            for saver in (lambda: api.garth.dump(self.tokenstore),
-                          lambda: api.session.dump(self.tokenstore)):
-                try:
-                    saver()
-                    break
-                except Exception:
-                    continue
 
     def get_activities(self, since: str, until: str | None = None) -> list[Activity]:
         if self._api is None:

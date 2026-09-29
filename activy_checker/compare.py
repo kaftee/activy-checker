@@ -34,18 +34,21 @@ def compare(
     duration_tolerance_s: int = 8,
     distance_tolerance_km: float = 0.5,
 ) -> CompareResult:
-    """Greedy match by (date, duration ± tolerance)."""
+    """Match each Activy activity to the unused Garmin activity on the same date
+    whose duration is closest, provided the difference is within
+    ``duration_tolerance_s``. Each Garmin activity is matched at most once.
+    """
     result = CompareResult()
     used = [False] * len(garmin)
 
     for a in activy:
-        best = -1
+        best, best_diff = -1, None
         for i, g in enumerate(garmin):
             if used[i] or g.date != a.date:
                 continue
-            if abs(g.duration_s - a.duration_s) <= duration_tolerance_s:
-                best = i
-                break
+            diff = abs(g.duration_s - a.duration_s)
+            if diff <= duration_tolerance_s and (best_diff is None or diff < best_diff):
+                best, best_diff = i, diff
         if best >= 0:
             used[best] = True
             m = Match(activy=a, garmin=garmin[best])
