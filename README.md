@@ -19,6 +19,21 @@ Matched: 5 | Missing in Activy: 1 | Missing in Garmin: 0 | Distance mismatches: 
   2026-05-10  road_biking          98.40 km  3:12:00
 ```
 
+## Why I built this
+
+Activy's import from Garmin is not 100% reliable. I found out by pure chance:
+one day I noticed that an activity recorded on my Garmin had never appeared in
+Activy. Nothing warned me — not the app, not Activy.
+
+When I contacted Activy support, I was not told about any errors on their
+side, and they were not willing to look at the history of my earlier
+activities to check whether anything else was missing. I found that strange:
+if one activity can silently go missing, others can too, and I had no way to
+check.
+
+That is why I wrote `activy-checker` — so that anyone can verify their own
+Activy history against Garmin instead of relying on luck.
+
 ## Features
 
 - **Missing in Activy** — activities recorded on Garmin that never reached Activy.
@@ -115,6 +130,16 @@ line up one-to-one — the comparison matches individual activities, not kinds.
 - [Troubleshooting](docs/troubleshooting.md) — login problems, Garmin rate limits, reading the results
 - [Contributing](CONTRIBUTING.md) — development setup and tests
 - [Changelog](CHANGELOG.md)
+
+## Other integrations
+
+`activy-checker` currently compares Activy with **Garmin Connect** only. If
+you use Activy with **Strava**, **Polar**, **Suunto** or another service and
+would like it supported, please
+[open a feature request](https://github.com/kaftee/activy-checker/issues/new?template=feature_request.yml)
+and tell us which service you use.
+
+Found a bug? [Report it here](https://github.com/kaftee/activy-checker/issues/new?template=bug_report.yml).
 
 ## License
 

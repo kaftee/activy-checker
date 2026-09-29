@@ -3,6 +3,10 @@
 Thanks for helping! Bug reports, fixes and support for new activity types are
 all welcome.
 
+Would you like another service compared with Activy (Strava, Polar, Suunto, …)?
+Please [open a feature request](https://github.com/kaftee/activy-checker/issues/new?template=feature_request.yml)
+first, so we can discuss it before any code is written.
+
 ## Development setup
 
 Requires Python 3.12+.

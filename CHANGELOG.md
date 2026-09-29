@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5
+
+### Added
+- `--version` option.
+- README: why this tool exists, and how to request other integrations
+  (Strava, Polar, Suunto, …).
+- GitHub issue forms for feature requests / new integrations and bug reports.
+
 ## 0.2.4
 
 ### Changed

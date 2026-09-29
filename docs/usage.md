@@ -6,7 +6,7 @@ activy-checker [--since YYYY-MM-DD] [--until YYYY-MM-DD]
                [--activy-only] [--garmin-tokenstore PATH]
                [--include-steps]
                [--duration-tolerance SECONDS] [--distance-tolerance KM]
-               [--json PATH] [--verbose]
+               [--json PATH] [--verbose] [--version]
 ```
 
 The tool runs in three steps:
@@ -42,6 +42,7 @@ progress line shows what is happening:
 | `--distance-tolerance KM` | `0.5` | A matched pair whose distances differ by more than this is reported as a distance mismatch. |
 | `--json PATH` | none | Also write the full result to a JSON file. |
 | `--verbose` | off | Show the `garminconnect` library's sign-in messages, which are hidden by default. |
+| `--version` | | Print the installed version and exit. |
 
 ### Credentials
 
