@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Secrets & sessions (never commit)
+.activy_token.json
+.garminconnect
+*.token
+
+# Local exports / dumps
+*_dump/
+activy_dump/
+garmin_dump/
+*.csv
+result.json
