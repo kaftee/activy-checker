@@ -6,7 +6,7 @@ activy-checker [--since YYYY-MM-DD] [--until YYYY-MM-DD]
                [--activy-only] [--garmin-tokenstore PATH]
                [--include-steps]
                [--duration-tolerance SECONDS] [--distance-tolerance KM]
-               [--json PATH]
+               [--json PATH] [--verbose]
 ```
 
 The tool runs in three steps:
@@ -41,12 +41,22 @@ progress line shows what is happening:
 | `--duration-tolerance SECONDS` | `8` | Maximum difference in duration for two activities to be considered the same. |
 | `--distance-tolerance KM` | `0.5` | A matched pair whose distances differ by more than this is reported as a distance mismatch. |
 | `--json PATH` | none | Also write the full result to a JSON file. |
+| `--verbose` | off | Show the `garminconnect` library's sign-in messages, which are hidden by default. |
 
 ### Credentials
 
 Passwords are read with Python's `getpass` (not echoed) and are only kept in
 memory for the duration of the run. Nothing is written to disk except the
 optional Garmin session cache.
+
+If your Garmin account has two-step verification, Garmin emails you a code
+during sign-in and the tool waits for it:
+
+```
+Signing in to Garmin (this can take a moment) ...
+Garmin has sent you a verification code (check your email).
+Enter the code to continue:
+```
 
 ### Caching the Garmin session
 

@@ -59,7 +59,7 @@ def test_get_activities_uses_api():
     assert [a.kind for a in acts] == ["bike", "walk"]
 
 
-def _install_fake_garminconnect(monkeypatch, resume_ok, fresh_login_ok=True):
+def _install_fake_garminconnect(monkeypatch, resume_ok, fresh_login_ok=True, noisy=False):
     """Register a fake `garminconnect` module and return the list of created instances.
 
     Mirrors garminconnect 0.3 semantics: ``login(tokenstore)`` loads a saved
@@ -80,6 +80,10 @@ def _install_fake_garminconnect(monkeypatch, resume_ok, fresh_login_ok=True):
 
         def login(self, tokenstore=None):
             self.login_args = tokenstore
+            if noisy:  # like garminconnect when Garmin rate-limits a strategy
+                import logging
+                logging.getLogger("garminconnect.client").warning(
+                    "mobile+cffi returned 429: GarminConnectTooManyRequestsError: rate limited")
             if tokenstore is not None and resume_ok:
                 return None, None
             if not self.email or not self.password:
@@ -141,6 +145,43 @@ def test_try_resume_missing_session_is_false(monkeypatch, tmp_path):
     client = GarminClient(tokenstore=str(tmp_path))
     assert client.try_resume() is False
     assert client._api is None
+
+
+def test_library_warnings_are_captured_not_printed(monkeypatch, capsys):
+    import logging
+
+    _install_fake_garminconnect(monkeypatch, resume_ok=False, noisy=True)
+    lib_logger = logging.getLogger("garminconnect")
+    before = (list(lib_logger.handlers), lib_logger.propagate)
+    client = GarminClient()
+    client.login("someone@example.com", "secret")
+    assert capsys.readouterr().err == ""
+    assert client.log == ["WARNING: mobile+cffi returned 429: GarminConnectTooManyRequestsError: rate limited"]
+    assert (list(lib_logger.handlers), lib_logger.propagate) == before  # logger restored
+
+
+def test_library_warnings_pass_through_when_not_quiet(monkeypatch, caplog):
+    # Not swallowed: the record reaches the normal logging chain (in a real
+    # terminal Python prints it to stderr; under pytest caplog receives it).
+    _install_fake_garminconnect(monkeypatch, resume_ok=False, noisy=True)
+    client = GarminClient(quiet=False)
+    with caplog.at_level("WARNING"):
+        client.login("someone@example.com", "secret")
+    assert any("returned 429" in r.getMessage() for r in caplog.records)
+    assert client.log == []
+
+
+def test_logger_restored_after_failed_login(monkeypatch):
+    import logging
+
+    _install_fake_garminconnect(monkeypatch, resume_ok=False, fresh_login_ok=False, noisy=True)
+    lib_logger = logging.getLogger("garminconnect")
+    before = (list(lib_logger.handlers), lib_logger.propagate)
+    client = GarminClient()
+    with pytest.raises(GarminError):
+        client.login("someone@example.com", "secret")
+    assert (list(lib_logger.handlers), lib_logger.propagate) == before
+    assert client.log  # kept for diagnostics
 
 
 def test_failed_fresh_login_raises_garmin_error(monkeypatch):

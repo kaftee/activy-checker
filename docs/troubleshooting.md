@@ -18,16 +18,19 @@ A network problem: no connection, a proxy, or a firewall blocking
 `*.v3.activy.pl`. Check that you can reach
 `https://players.v3.activy.pl/auth/.well-known/openid-configuration` in a browser.
 
-### Garmin prints `… returned 429 … rate limited` but continues
+### Garmin sign-in takes a while
 
-The `garminconnect` library tries several sign-in strategies. Garmin
-rate-limits some of them, so warnings like these are normal as long as the run
-continues and ends with your activities:
+The `garminconnect` library tries several sign-in strategies in turn. Garmin
+often rejects the first ones with HTTP 429 before a later one succeeds. These
+attempts are hidden by default; run with `--verbose` to see them:
 
 ```
 mobile+cffi returned 429: GarminConnectTooManyRequestsError: …
 mobile+requests returned 429: GarminConnectTooManyRequestsError: …
 ```
+
+They are normal as long as the run continues. If sign-in fails, the last of
+these messages are printed under "Garmin sign-in details".
 
 ### `Garmin error: … 429 …` and the run stops
 
@@ -41,10 +44,14 @@ activy-checker --garmin-tokenstore ~/.garminconnect
 After one successful login, later runs reuse the session and do not sign in
 again.
 
-### I'm asked for a Garmin MFA code every time
+### I'm asked for a Garmin verification code every time
 
-Use `--garmin-tokenstore`; the code is then only needed when the saved session
+With two-step verification, Garmin emails a code on every fresh sign-in. Use
+`--garmin-tokenstore`; the code is then only needed when the saved session
 expires.
+
+If the code does not arrive, check your spam folder. Codes expire after a
+short time, so enter it promptly.
 
 ### `Found old garth-format tokens … no longer supported`
 

@@ -29,14 +29,22 @@ class FakeGarminClient:
     logins = []
     fetch_error = None
 
-    def __init__(self, tokenstore=None):
+    last = None
+    mfa_needed = False
+
+    def __init__(self, tokenstore=None, quiet=True):
         self.tokenstore = tokenstore
+        self.quiet = quiet
+        self.log = ["WARNING: mobile+cffi returned 429: rate limited"]
+        FakeGarminClient.last = self
 
     def try_resume(self):
         return bool(self.tokenstore) and self.has_saved_session
 
     def login(self, email=None, password=None, mfa_prompt=None):
         FakeGarminClient.logins.append((email, password))
+        if self.mfa_needed:
+            self.mfa_code = mfa_prompt()
 
     def get_activities(self, since, until=None):
         if self.fetch_error:
@@ -54,6 +62,7 @@ def fakes(monkeypatch):
     FakeGarminClient.has_saved_session = False
     FakeGarminClient.logins = []
     FakeGarminClient.fetch_error = None
+    FakeGarminClient.mfa_needed = False
     FakeGarminClient.activities = [
         mk("garmin", "2026-09-01", 3600, 30.0),
         mk("garmin", "2026-09-27", 12003, 106.23),
@@ -188,6 +197,34 @@ def test_progress_message_format():
     multi = cli._activy_progress({"contest": 2, "contests": 3, "page": 1, "found": 0,
                                   "reached": ""}, "2026-09-01")
     assert "(contest 2/3)" in multi and "reached" not in multi
+
+
+def test_mfa_prompt_says_a_code_was_sent(fakes, monkeypatch, capsys):
+    FakeGarminClient.mfa_needed = True
+    monkeypatch.setattr("builtins.input", lambda prompt="": "123456")
+    rc = cli.main(["--since", "2026-09-01", "--activy-email", "a@example.com",
+                   "--garmin-email", "g@example.com"])
+    err = capsys.readouterr().err
+    assert rc == 0
+    assert "Garmin has sent you a verification code (check your email)." in err
+    assert "Enter the code to continue:" in err
+    assert FakeGarminClient.last.mfa_code == "123456"
+
+
+def test_garmin_library_is_quiet_by_default_and_verbose_flag(fakes):
+    cli.main(["--since", "2026-09-01"])
+    assert FakeGarminClient.last.quiet is True
+    cli.main(["--since", "2026-09-01", "--verbose"])
+    assert FakeGarminClient.last.quiet is False
+
+
+def test_garmin_failure_shows_captured_details(fakes, capsys):
+    FakeGarminClient.fetch_error = RuntimeError("All login strategies rate limited (429)")
+    rc = cli.main(["--since", "2026-09-01"])
+    err = capsys.readouterr().err
+    assert rc == 3
+    assert "Garmin sign-in details:" in err
+    assert "returned 429" in err
 
 
 def test_default_since_is_fixed_date():
