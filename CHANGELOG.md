@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+### Changed
+- `--since` defaults to the fixed date `2026-09-01`; pass `--since` to use another start date.
+
 ## 0.2.2
 
 ### Changed

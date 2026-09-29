@@ -101,7 +101,7 @@ comparison works on individual activities, so this does not affect it.
 
 Activy activities are read from the feeds of contests you have joined. If you
 are not in any contest, nothing is found. Also check the date range: the
-default starts on the first day of the current month.
+default starts on 2026-09-01; pass `--since` for another start date.
 
 Version 0.2.0 had a bug that always returned no Activy activities after a long
 wait; upgrade to 0.2.1 or later.

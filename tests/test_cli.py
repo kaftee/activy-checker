@@ -190,12 +190,12 @@ def test_progress_message_format():
     assert "(contest 2/3)" in multi and "reached" not in multi
 
 
-def test_default_since_is_first_day_of_current_month():
-    import datetime
+def test_default_since_is_fixed_date():
+    assert cli.build_parser().parse_args([]).since == "2026-09-01"
 
-    args = cli.build_parser().parse_args([])
-    assert args.since == datetime.date.today().replace(day=1).isoformat()
-    assert args.since.endswith("-01")
+
+def test_since_flag_overrides_default():
+    assert cli.build_parser().parse_args(["--since", "2026-05-01"]).since == "2026-05-01"
 
 
 def test_ctrl_c_exits_cleanly(fakes, monkeypatch, capsys):
