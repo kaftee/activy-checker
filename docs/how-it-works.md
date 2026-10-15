@@ -54,7 +54,8 @@ The app has no "list my activities" query. Your activities are visible as
 `Ride` entries in the feeds of the contests you take part in, so the client:
 
 1. Lists your contests with `MyContests`.
-2. For each contest, pages through the feed (`Page` = 0, 1, 2, …, `PageSize` = 50).
+2. For each contest, pages through the feed (`Page` = 0, 1, 2, …, `PageSize` = 100,
+   the most the feed returns per request).
 3. Keeps only `Ride` entries whose `UserId` is yours, dated on or after `--since`.
 4. De-duplicates by `ActivityId` (an activity can appear in several contests or pages).
 
@@ -65,6 +66,13 @@ Paging stops as soon as:
 - a full page is older than `--since`,
 - the feed returns the same page again (it ignores paging), or
 - 500 pages have been read (safety limit).
+
+In practice the Activy feeds **ignore `Page`**: every request returns the same
+newest 100 entries. When a feed stops like that before reaching `--since`, the
+older activities were never seen, so the CLI moves the start of the check to
+the day after the oldest entry it read and prints a warning — otherwise every
+older Garmin activity would be reported as missing in Activy. See
+[troubleshooting](troubleshooting.md#the-check-starts-later-than---since).
 
 While this runs, the CLI shows a progress line on stderr — the current page,
 how many of your activities were found so far and how far back the feed has

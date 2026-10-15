@@ -101,7 +101,15 @@ def _run(argv: list[str] | None) -> int:
     except (ActivyError, OSError, ValueError) as e:  # OSError covers network errors
         print(f"Activy error: {e}", file=sys.stderr)
         return 2
-    activy_acts = [a for a in activy_acts if args.since <= a.date <= args.until]
+    since = args.since
+    if activy.complete_since and activy.complete_since > since:
+        # Older Activy activities were never seen; comparing them with Garmin
+        # would report them all as missing in Activy.
+        since = activy.complete_since
+        print(f"Warning: Activy returns only your most recent activities, so the check starts "
+              f"on {since} instead of {args.since}. See "
+              "docs/troubleshooting.md#the-check-starts-later-than---since", file=sys.stderr)
+    activy_acts = [a for a in activy_acts if since <= a.date <= args.until]
     if not args.include_steps:
         activy_acts = [a for a in activy_acts if a.kind != KIND_STEPS]
     if not activy_acts:
@@ -115,7 +123,7 @@ def _run(argv: list[str] | None) -> int:
         return 0
 
     # --- Garmin ---
-    print(f"\nFetching Garmin activities since {args.since}.", file=sys.stderr)
+    print(f"\nFetching Garmin activities since {since}.", file=sys.stderr)
     garmin = GarminClient(tokenstore=args.garmin_tokenstore, quiet=not args.verbose)
     try:
         with Spinner("Checking for a saved Garmin session ..."):
@@ -129,8 +137,8 @@ def _run(argv: list[str] | None) -> int:
             # its own messages, which an animated line would overwrite.
             print("Signing in to Garmin (this can take a moment) ...", file=sys.stderr)
             garmin.login(gemail, gpass, mfa_prompt=lambda: _prompt(MFA_PROMPT, None))
-        with Spinner(f"Fetching Garmin activities {args.since} .. {args.until} ..."):
-            garmin_acts = garmin.get_activities(args.since, args.until)
+        with Spinner(f"Fetching Garmin activities {since} .. {args.until} ..."):
+            garmin_acts = garmin.get_activities(since, args.until)
     except Exception as e:  # garminconnect raises its own exception types
         print(f"Garmin error: {e}", file=sys.stderr)
         if garmin.log and not args.verbose:
@@ -138,7 +146,7 @@ def _run(argv: list[str] | None) -> int:
             for line in garmin.log[-5:]:
                 print(f"  {line}", file=sys.stderr)
         return 3
-    garmin_acts = [a for a in garmin_acts if args.since <= a.date <= args.until]
+    garmin_acts = [a for a in garmin_acts if since <= a.date <= args.until]
     print()
     print(render_summary("Garmin", garmin_acts))
 

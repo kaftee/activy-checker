@@ -113,6 +113,20 @@ default starts on 2026-09-01; pass `--since` for another start date.
 Version 0.2.0 had a bug that always returned no Activy activities after a long
 wait; upgrade to 0.2.1 or later.
 
+### The check starts later than `--since`
+
+You see `Warning: Activy returns only your most recent activities, so the check
+starts on … instead of …`.
+
+The Activy feeds return only their newest 100 entries and ignore requests for
+older pages. If your feed reaches back less far than `--since`, older Activy
+activities cannot be read, so the tool starts the check (for both Activy and
+Garmin) on the first date it can verify instead of reporting those activities
+as missing. Check the earlier period in the Activy app.
+
+Versions up to 0.2.6 read only the newest 50 entries and silently reported
+older Garmin activities as missing in Activy.
+
 ## Something else
 
 The Activy API is unofficial and may change. If the tool suddenly stops

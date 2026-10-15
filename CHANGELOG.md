@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7
+
+### Fixed
+- Activities older than the Activy feed's newest 50 entries were reported as
+  missing in Activy, although they were there: the feed ignores paging, so they
+  were never read. The feed is now read 100 entries at a time (its maximum),
+  and if it still does not reach `--since`, the check starts on the first date
+  it can verify, with a warning, instead of reporting false gaps.
+
 ## 0.2.6
 
 ### Added

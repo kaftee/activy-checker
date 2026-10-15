@@ -4,6 +4,7 @@ from activy_checker import activy as activy_mod
 from activy_checker.activy import (
     CONTEST_FEED,
     MYCONTESTS,
+    PAGE_SIZE,
     USER_CONTEST_FEED,
     ActivyClient,
     ActivyError,
@@ -172,6 +173,31 @@ def test_stops_when_feed_ignores_paging():
     assert client.get_activities(since="2026-09-01", max_pages=500) == []
     feed_calls = [1 for _, ns, _ in client.calls if ns == USER_CONTEST_FEED]
     assert len(feed_calls) <= 3  # probe + page 0 + one repeat, not 500
+    # The feed never reached 'since', and 2026-09-28 may be cut off part-way.
+    assert client.complete_since == "2026-09-29"
+
+
+def test_complete_since_is_none_when_feed_reaches_since():
+    pages = [
+        [activy_event(ME, "2026-09-05", "a1")],
+        [activy_event(OTHER, "2026-08-20", "b1")],
+    ]
+    client = FakeActivy(pages)
+    client.get_activities(since="2026-09-01")
+    assert client.complete_since is None
+
+
+def test_complete_since_is_none_when_feed_ends():
+    client = FakeActivy([[activy_event(ME, "2026-09-05", "a1")]])  # then an empty page
+    client.get_activities(since="2026-09-01")
+    assert client.complete_since is None
+
+
+def test_feed_is_requested_with_the_maximum_page_size():
+    client = FakeActivy([[activy_event(ME, "2026-09-05", "a1")]])
+    client.get_activities(since="2026-09-01")
+    sizes = {p["PageSize"] for _, ns, p in client.calls if ns == USER_CONTEST_FEED}
+    assert sizes == {PAGE_SIZE}
 
 
 def test_progress_callback_reports_each_page():

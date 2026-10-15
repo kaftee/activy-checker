@@ -11,6 +11,7 @@ from .conftest import make_activity as mk
 class FakeActivyClient:
     activities = []
     fail = None  # exception instance to raise from login()
+    complete_since = None
 
     def login(self, email, password):
         if self.fail:
@@ -59,6 +60,7 @@ def fakes(monkeypatch):
         mk("activy", "2026-08-15", 3600, 30.0),  # outside the range, filtered out
     ]
     FakeActivyClient.fail = None
+    FakeActivyClient.complete_since = None
     FakeGarminClient.has_saved_session = False
     FakeGarminClient.logins = []
     FakeGarminClient.fetch_error = None
@@ -80,6 +82,16 @@ def test_full_run_reports_missing_activity(fakes, capsys):
     assert "== Activy ==" in out and "== Garmin ==" in out
     assert "Missing in Activy: 1" in out
     assert "106.23 km" in out
+
+
+def test_truncated_activy_feed_moves_the_start_date(fakes, capsys):
+    FakeActivyClient.complete_since = "2026-09-10"
+    rc = cli.main(["--since", "2026-09-01", "--until", "2026-09-30"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "check starts on 2026-09-10 instead of 2026-09-01" in captured.err
+    # The 2026-09-01 activities predate what Activy returned: neither side counts them.
+    assert "Matched: 0 | Missing in Activy: 1 | Missing in Garmin: 0" in captured.out
 
 
 def test_activy_only_skips_garmin(fakes, capsys):

@@ -6,6 +6,7 @@ Intended for use with your own account and your own data.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import ssl
 import urllib.error
@@ -42,6 +43,9 @@ MYCONTESTS = "Activy.Contests.Contracts.Mobile.Contests.MyContests"
 USER_CONTEST_FEED = "Activy.Players.Contracts.Mobile.Newsfeed.UserContestFeed"
 CONTEST_FEED = "Activy.Players.Contracts.Mobile.Newsfeed.ContestFeed"
 
+# The feeds return at most this many entries per request; larger values are capped.
+PAGE_SIZE = 100
+
 # Activy ActivityType -> common category
 _KIND_BY_TYPE = {0: KIND_BIKE, 1: KIND_RUN, 2: KIND_EXERCISE, 3: KIND_STEPS}
 
@@ -57,6 +61,10 @@ class ActivyClient:
         self._token: str | None = None
         self._user_id: str | None = None
         self.timeout = timeout
+        # Set by get_activities() when a feed stopped before reaching 'since'
+        # (it ignores paging, so only its newest entries are readable): the
+        # first date from which the returned activities are complete.
+        self.complete_since: str | None = None
 
     # ---- authentication --------------------------------------------------
     def login(self, email: str, password: str) -> None:
@@ -147,9 +155,13 @@ class ActivyClient:
         ``contest`` / ``contests`` (1-based index and total), ``page``
         (1-based), ``found`` (your activities so far) and ``reached`` (the
         oldest date seen on that page).
+
+        If a feed could not be read back to ``since``, ``complete_since`` is
+        set to the first date the result is complete from; otherwise it is None.
         """
         me = self.user_id
         found: dict[str, Activity] = {}
+        cut_offs = []
         cids = self.contest_ids()
         for n, cid in enumerate(cids, 1):
             report = None
@@ -157,25 +169,37 @@ class ActivyClient:
                 def report(page, reached, n=n):
                     progress({"contest": n, "contests": len(cids), "page": page,
                               "found": len(found), "reached": reached})
-            self._collect_contest(cid, me, since, found, max_pages, report)
+            cut_off = self._collect_contest(cid, me, since, found, max_pages, report)
+            if cut_off:
+                cut_offs.append(cut_off)
+        # The oldest day a truncated feed reached may itself be cut off
+        # part-way, so the result is complete only from the day after it.
+        self.complete_since = _next_day(max(cut_offs)) if cut_offs else None
         return sorted(found.values(), key=lambda a: a.start or "")
 
-    def _collect_contest(self, cid, me, since, found, max_pages, report=None) -> None:
+    def _collect_contest(self, cid, me, since, found, max_pages, report=None) -> str | None:
+        """Add your activities from one contest feed to ``found``.
+
+        Returns the oldest date read if the feed stopped before reaching
+        ``since`` (anything older was never seen), else None.
+        """
         # UserContestFeed requires both the contest and your user id; without
         # UserId the API rejects the request.
         base = {"ContestId": cid, "UserId": me}
         feed = USER_CONTEST_FEED
-        st, arr = self.query("players", feed, dict(base, Page=0, PageSize=50))
+        st, arr = self.query("players", feed, dict(base, Page=0, PageSize=PAGE_SIZE))
         if st != 200 or not isinstance(arr, list) or not arr:
             feed = CONTEST_FEED
         page = 0
         previous = None
+        oldest = ""
         while page < max_pages:
-            st, arr = self.query("players", feed, dict(base, Page=page, PageSize=50))
+            st, arr = self.query("players", feed, dict(base, Page=page, PageSize=PAGE_SIZE))
             if st != 200 or not isinstance(arr, list) or not arr:
-                break
+                return None  # end of the feed
             # Guard against a feed that ignores paging and keeps returning the
-            # same page: stop instead of re-reading it until max_pages.
+            # same page (the real Activy feeds do): stop instead of re-reading
+            # it until max_pages.
             signature = json.dumps(arr, sort_keys=True, default=str)
             if signature == previous:
                 break
@@ -194,12 +218,20 @@ class ActivyClient:
                 act = _ride_to_activity(ride, ev.get("Date"))
                 if act and act.id not in found:
                     found[act.id] = act
+            reached = min((d for d in page_dates if d), default="")
+            if reached and (not oldest or reached < oldest):
+                oldest = reached
             if report:
-                report(page + 1, min((d for d in page_dates if d), default=""))
+                report(page + 1, reached)
             # early stop: whole page older than 'since'
             if page_dates and max(page_dates) < since:
-                break
+                return None
             page += 1
+        return oldest if oldest and oldest >= since else None
+
+
+def _next_day(date: str) -> str:
+    return (datetime.date.fromisoformat(date) + datetime.timedelta(days=1)).isoformat()
 
 
 def _duration_seconds(t: str | None) -> int:
