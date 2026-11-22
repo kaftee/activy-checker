@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 ### Changed
 - `--since` defaults to 30 days ago instead of the fixed date `2026-09-01`,
