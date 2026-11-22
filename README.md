@@ -1,6 +1,9 @@
 # activy-checker
 
 [![tests](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/kaftee/activy-checker/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/activy-checker)](https://pypi.org/project/activy-checker/)
+[![Python](https://img.shields.io/pypi/pyversions/activy-checker)](https://pypi.org/project/activy-checker/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/kaftee/activy-checker/blob/main/LICENSE)
 
 Audit [Activy](https://activy.app)'s activity sync: detect activities that
 never arrived and activities recorded with incorrect distances — and get a
@@ -131,6 +134,7 @@ line up one-to-one — the comparison matches individual activities, not kinds.
 - [How it works](https://github.com/kaftee/activy-checker/blob/main/docs/how-it-works.md) — the Activy API, fetching, matching rules, type mapping
 - [Troubleshooting](https://github.com/kaftee/activy-checker/blob/main/docs/troubleshooting.md) — login problems, Garmin rate limits, reading the results
 - [Contributing](https://github.com/kaftee/activy-checker/blob/main/CONTRIBUTING.md) — development setup, tests and releases
+- [Security policy](https://github.com/kaftee/activy-checker/blob/main/SECURITY.md) — reporting a vulnerability, how credentials are handled
 - [Changelog](https://github.com/kaftee/activy-checker/blob/main/CHANGELOG.md)
 
 ## Other integrations

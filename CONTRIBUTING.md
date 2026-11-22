@@ -30,6 +30,17 @@ in-memory fakes (see `tests/conftest.py` and the `Fake*` classes in the tests),
 so no accounts or network access are needed. CI runs the same tests on
 Python 3.12, 3.13 and 3.14 for every push and pull request.
 
+## Linting
+
+```bash
+ruff check .          # the same check CI runs
+ruff check --fix .    # apply the safe automatic fixes
+```
+
+The rules are in `pyproject.toml` (`[tool.ruff]`). Dependabot proposes updates
+for the dependencies and for the GitHub Actions, which are pinned to commit
+SHAs, once a month.
+
 ## Guidelines
 
 - **Never commit personal data.** Test fixtures must be synthetic: no real
@@ -47,13 +58,18 @@ Releases are published to PyPI by the `publish` GitHub Actions workflow using
 [Trusted Publishing](https://docs.pypi.org/trusted-publishers/), so no API
 tokens are stored anywhere.
 
-1. Bump `version` in `pyproject.toml` and `__version__` in
-   `activy_checker/__init__.py`, and add a `CHANGELOG.md` entry.
+1. Bump `version` in `pyproject.toml` (the only place it is set:
+   `activy_checker.__version__` reads it from the installed package) and turn
+   the `Unreleased` section of `CHANGELOG.md` into the new version.
 2. Create a GitHub release with tag `vX.Y.Z` matching the version. Publishing
-   the release uploads it to PyPI.
+   the release runs the `publish` workflow, which waits for a maintainer to
+   approve the `pypi` environment and then uploads to PyPI.
 
 ## Reporting a bug
 
 Please include the command you ran, the error output, and your Python and
 `garminconnect` versions (`pip show garminconnect`). Remove any email
 addresses, tokens and activity details you do not want to share.
+
+A security problem goes through a private report instead, see
+[SECURITY.md](SECURITY.md).
