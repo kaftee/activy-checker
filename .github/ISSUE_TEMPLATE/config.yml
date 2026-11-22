@@ -1,1 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/kaftee/activy-checker/security/advisories/new
+    about: Please report security problems privately, not as a public issue.
+  - name: Documentation
+    url: https://github.com/kaftee/activy-checker/blob/main/docs/usage.md
+    about: Every option, exit codes, JSON output and using it as a library.
