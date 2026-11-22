@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- `--since` defaults to 30 days ago instead of the fixed date `2026-09-01`,
+  so a plain `activy-checker` checks the last month.
 - `--since` and `--until` must be real dates in the form `YYYY-MM-DD`, with
   `--since` not after `--until`; anything else stops with a clear message
   instead of an empty or wrong comparison.

@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import pytest
@@ -248,8 +249,11 @@ def test_version_flag(capsys):
     assert capsys.readouterr().out.strip() == f"activy-checker {__version__}"
 
 
-def test_default_since_is_fixed_date():
-    assert cli.build_parser().parse_args([]).since == "2026-09-01"
+def test_default_window_is_the_last_30_days():
+    args = cli.build_parser().parse_args([])
+    today = datetime.date.today()
+    assert args.since == (today - datetime.timedelta(days=30)).isoformat()
+    assert args.until == today.isoformat()
 
 
 def test_since_flag_overrides_default():

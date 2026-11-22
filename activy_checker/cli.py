@@ -15,7 +15,7 @@ from .models import KIND_STEPS, Activity
 from .progress import Spinner
 from .report import render_comparison, render_summary, summarize
 
-DEFAULT_SINCE = "2026-09-01"
+DEFAULT_DAYS = 30  # --since defaults to this many days before today
 
 
 def _prompt(label: str, value: str | None) -> str:
@@ -40,9 +40,10 @@ def build_parser() -> argparse.ArgumentParser:
         prog="activy-checker",
         description="Audit Activy's activity sync: detect missing activities and incorrect distances.",
     )
-    p.add_argument("--since", type=_iso_date, default=DEFAULT_SINCE, metavar="YYYY-MM-DD",
-                   help=f"Start date (default: {DEFAULT_SINCE})")
-    p.add_argument("--until", type=_iso_date, default=datetime.date.today().isoformat(), metavar="YYYY-MM-DD",
+    today = datetime.date.today()
+    p.add_argument("--since", type=_iso_date, default=(today - datetime.timedelta(days=DEFAULT_DAYS)).isoformat(),
+                   metavar="YYYY-MM-DD", help=f"Start date (default: {DEFAULT_DAYS} days ago)")
+    p.add_argument("--until", type=_iso_date, default=today.isoformat(), metavar="YYYY-MM-DD",
                    help="End date (default: today)")
     p.add_argument("--activy-email", default=None, help="Activy email (else prompted)")
     p.add_argument("--garmin-email", default=None, help="Garmin email (else prompted)")
