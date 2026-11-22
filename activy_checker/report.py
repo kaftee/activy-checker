@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from .compare import CompareResult
-from .models import Activity, KIND_LABEL, format_duration
+from .models import KIND_LABEL, Activity, format_duration
 
 
 def summarize(activities: list[Activity]) -> dict:

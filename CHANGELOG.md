@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `--since` and `--until` must be real dates in the form `YYYY-MM-DD`, with
+  `--since` not after `--until`; anything else stops with a clear message
+  instead of an empty or wrong comparison.
+- Requests to Activy identify themselves with the real package version
+  (`activy-checker/X.Y.Z`) instead of a fixed `1.0`.
+
 ## 0.2.7
 
 ### Fixed

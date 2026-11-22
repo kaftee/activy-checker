@@ -256,6 +256,21 @@ def test_since_flag_overrides_default():
     assert cli.build_parser().parse_args(["--since", "2026-05-01"]).since == "2026-05-01"
 
 
+@pytest.mark.parametrize("bad", ["2026-13-01", "01.09.2026", "yesterday"])
+def test_invalid_date_is_rejected(bad, capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--since", bad])
+    assert exc.value.code == 2
+    assert "is not a date in the form YYYY-MM-DD" in capsys.readouterr().err
+
+
+def test_since_after_until_is_rejected(capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--since", "2026-09-30", "--until", "2026-09-01"])
+    assert exc.value.code == 2
+    assert "--since 2026-09-30 is after --until 2026-09-01" in capsys.readouterr().err
+
+
 def test_ctrl_c_exits_cleanly(fakes, monkeypatch, capsys):
     def interrupted(prompt=""):
         raise KeyboardInterrupt

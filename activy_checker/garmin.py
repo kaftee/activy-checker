@@ -4,16 +4,17 @@ from __future__ import annotations
 import contextlib
 import datetime
 import logging
-from typing import Any, Callable, Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 from .models import (
-    Activity,
     KIND_BIKE,
     KIND_EXERCISE,
     KIND_OTHER,
     KIND_RUN,
     KIND_SWIM,
     KIND_WALK,
+    Activity,
 )
 
 # Garmin activityType.typeKey -> common category

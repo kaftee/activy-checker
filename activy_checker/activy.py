@@ -12,15 +12,16 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .models import (
-    Activity,
     KIND_BIKE,
     KIND_EXERCISE,
     KIND_OTHER,
     KIND_RUN,
     KIND_STEPS,
+    Activity,
 )
 
 AUTH_BASE = "https://players.v3.activy.pl/auth"
@@ -83,7 +84,7 @@ class ActivyClient:
                 body = json.loads(r.read().decode("utf-8", "replace"))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")
-            raise ActivyError(f"Activy login failed (HTTP {e.code}): {detail[:200]}")
+            raise ActivyError(f"Activy login failed (HTTP {e.code}): {detail[:200]}") from e
         token = body.get("access_token")
         if not token:
             raise ActivyError(f"No access_token in response: {body}")
@@ -102,11 +103,13 @@ class ActivyClient:
     def _headers(self) -> dict[str, str]:
         if not self._token:
             raise ActivyError("Not logged in: call client.login(email, password) first")
+        from . import __version__  # here, not at the top: the package imports this module first
+
         return {
             "Authorization": "Bearer " + self._token,
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "activy-checker/1.0",
+            "User-Agent": f"activy-checker/{__version__}",
         }
 
     def _get(self, url: str) -> Any:

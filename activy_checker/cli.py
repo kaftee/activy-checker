@@ -9,12 +9,11 @@ import sys
 
 from . import __version__
 from .activy import ActivyClient, ActivyError
-from .compare import compare
+from .compare import CompareResult, compare
 from .garmin import GarminClient
 from .models import KIND_STEPS, Activity
 from .progress import Spinner
 from .report import render_comparison, render_summary, summarize
-
 
 DEFAULT_SINCE = "2026-09-01"
 
@@ -28,15 +27,23 @@ def _prompt(label: str, value: str | None) -> str:
     return input().strip()
 
 
+def _iso_date(value: str) -> str:
+    """argparse type: a YYYY-MM-DD date, kept as the ISO string the rest of the code compares."""
+    try:
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a date in the form YYYY-MM-DD") from None
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="activy-checker",
         description="Audit Activy's activity sync: detect missing activities and incorrect distances.",
     )
-    p.add_argument("--since", default=DEFAULT_SINCE,
-                   help=f"Start date YYYY-MM-DD (default: {DEFAULT_SINCE})")
-    p.add_argument("--until", default=datetime.date.today().isoformat(),
-                   help="End date YYYY-MM-DD (default: today)")
+    p.add_argument("--since", type=_iso_date, default=DEFAULT_SINCE, metavar="YYYY-MM-DD",
+                   help=f"Start date (default: {DEFAULT_SINCE})")
+    p.add_argument("--until", type=_iso_date, default=datetime.date.today().isoformat(), metavar="YYYY-MM-DD",
+                   help="End date (default: today)")
     p.add_argument("--activy-email", default=None, help="Activy email (else prompted)")
     p.add_argument("--garmin-email", default=None, help="Garmin email (else prompted)")
     p.add_argument("--activy-only", action="store_true",
@@ -85,7 +92,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run(argv: list[str] | None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.since > args.until:
+        parser.error(f"--since {args.since} is after --until {args.until}")
 
     # --- Activy ---
     print(f"Fetching Activy activities since {args.since}.", file=sys.stderr)
@@ -163,7 +173,8 @@ def _run(argv: list[str] | None) -> int:
     return 0
 
 
-def _write_json(path, activy_acts, garmin_acts, result) -> None:
+def _write_json(path: str, activy_acts: list[Activity], garmin_acts: list[Activity] | None,
+                result: CompareResult | None) -> None:
     out = {
         "activy": {
             "summary": summarize(activy_acts),

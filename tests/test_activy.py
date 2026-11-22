@@ -223,6 +223,14 @@ def test_calls_without_login_raise():
         ActivyClient()._headers()
 
 
+def test_user_agent_carries_the_package_version():
+    from activy_checker import __version__
+
+    client = ActivyClient()
+    client._token = "t"
+    assert client._headers()["User-Agent"] == f"activy-checker/{__version__}"
+
+
 def test_login_sends_password_grant(monkeypatch):
     captured = {}
 

@@ -37,7 +37,7 @@ class Spinner:
     def update(self, message: str) -> None:
         self.message = message
 
-    def start(self) -> "Spinner":
+    def start(self) -> Spinner:
         if self.enabled and self._thread is None:
             self._draw()
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -57,7 +57,7 @@ class Spinner:
             self.stream.write(final + "\n")
             self.stream.flush()
 
-    def __enter__(self) -> "Spinner":
+    def __enter__(self) -> Spinner:
         return self.start()
 
     def __exit__(self, *exc) -> None:
