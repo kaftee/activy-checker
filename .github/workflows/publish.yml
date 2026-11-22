@@ -2,18 +2,12 @@ name: publish
 
 # Publishes to PyPI with Trusted Publishing (OIDC) — no API tokens are stored.
 #  - Publishing a GitHub release  -> PyPI
-#  - Manual run (Actions tab)     -> TestPyPI or PyPI, as chosen
+#  - Manual run (Actions tab)     -> PyPI
 
 on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      repository:
-        description: "Where to publish"
-        type: choice
-        options: [testpypi, pypi]
-        default: testpypi
 
 jobs:
   build:
@@ -45,27 +39,8 @@ jobs:
           name: dist
           path: dist/
 
-  publish-testpypi:
-    needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi'
-    runs-on: ubuntu-24.04
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/activy-checker
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: dist
-          path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
   publish-pypi:
     needs: build
-    if: github.event_name == 'release' || inputs.repository == 'pypi'
     runs-on: ubuntu-24.04
     environment:
       name: pypi
